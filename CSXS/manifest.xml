@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ExtensionManifest Version="7.0" ExtensionBundleId="com.kyarov.aeSorter" ExtensionBundleVersion="1.0"
+    ExtensionBundleName="aeSorter" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <ExtensionList>
+        <Extension Id="com.kyarov.aeSorter" Version="1.0" />
+    </ExtensionList>
+    <ExecutionEnvironment>
+        <HostList>
+            <!-- AEFT = After Effects. Expanded range to support AE CC 2018+ -->
+            <Host Name="AEFT" Version="[15.0,99.9]" />
+        </HostList>
+        <LocaleList>
+            <Locale Code="All" />
+        </LocaleList>
+        <RequiredRuntimeList>
+            <RequiredRuntime Name="CSXS" Version="9.0" />
+        </RequiredRuntimeList>
+    </ExecutionEnvironment>
+    <DispatchInfoList>
+        <Extension Id="com.kyarov.aeSorter">
+            <DispatchInfo>
+                <Resources>
+                    <MainPath>./index.html</MainPath>
+                    <ScriptPath>./host/index.jsx</ScriptPath>
+                </Resources>
+                
+                <Lifecycle>
+                    <AutoVisible>true</AutoVisible>
+                </Lifecycle>
+
+                <CEFCommandLine>
+                    <Parameter>--enable-nodejs</Parameter>
+                    <Parameter>--mixed-context</Parameter>
+                </CEFCommandLine>
+
+                <UI>
+                    <Type>Panel</Type>
+                    <Menu>AESORTER</Menu>
+                    <Geometry>
+                        <Size>
+                            <Height>300</Height>
+                            <Width>250</Width>
+                        </Size>
+                    </Geometry>
+                </UI>
+            </DispatchInfo>
+            
+        </Extension>
+    </DispatchInfoList>
+</ExtensionManifest>

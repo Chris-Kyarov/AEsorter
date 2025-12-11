@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AESORTER</title>
+    
+    <!-- 1. Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. Load Adobe CSInterface -->
+    <script src="./lib/CSInterface.js"></script>
+
+    <!-- 3. Load React & ReactDOM (UMD - Global Variables) -->
+    <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+    
+    <!-- 4. Load Babel Standalone (With warning suppression) -->
+    <script>
+        // Suppress "You are using the in-browser Babel transformer" warning
+        // This is safe for CEP panels where we intentionally avoid bundlers for simplicity
+        (function() {
+            var originalWarn = console.warn;
+            console.warn = function() {
+                if (arguments.length > 0 && typeof arguments[0] === 'string' && arguments[0].indexOf('in-browser Babel transformer') > -1) {
+                    return;
+                }
+                originalWarn.apply(console, arguments);
+            };
+        })();
+    </script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- 5. EMBEDDED CSS -->
+    <style>
+        /* CUSTOM SCROLLBAR */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #1d1d1d; 
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #2680eb 0%, #ffffff 50%, #2680eb 100%);
+            border-radius: 4px;
+        }
+
+        /* ROOT CONTAINER - ANTI-BLUR & JITTER FIXES */
+        .app-container {
+            -webkit-text-stroke: 0.35px;
+            -webkit-font-smoothing: antialiased;
+            transform: translate3d(0, 0, 0);
+            backface-visibility: hidden;
+            perspective: 1000px;
+        }
+
+        /* ANIMATIONS */
+        @keyframes slideIn { 
+            from { opacity: 0; transform: translateY(-10px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+
+        .animate-slide-in {
+            animation: slideIn 0.25s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+        }
+
+        /* BUTTON TRANSITIONS */
+        .smooth-transition {
+            transition: transform 200ms ease-out, background-color 200ms ease-out, border-color 200ms ease-out, box-shadow 200ms ease-out, color 200ms ease-out !important;
+            will-change: transform;
+        }
+
+        /* GEAR ICON TRANSITION */
+        .gear-transition {
+            transition: transform 500ms cubic-bezier(0.34, 1.56, 0.64, 1), fill 200ms ease-out !important;
+            transform-origin: center;
+        }
+        
+        /* ERROR OVERLAY */
+        #error-overlay {
+            display: none;
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.9); color: #ff5555;
+            padding: 20px; font-family: monospace; font-size: 12px;
+            z-index: 9999; overflow: auto; white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body class="bg-[#1d1d1d] text-[#ececec] overflow-y-auto">
+    <div id="root"></div>
+    <div id="error-overlay"></div>
+
+    <!-- ERROR TRAPPING -->
+    <script>
+        window.onerror = function(msg, url, line, col, error) {
+            var overlay = document.getElementById('error-overlay');
+            if(overlay) {
+                overlay.style.display = 'block';
+                overlay.innerHTML += "Error: " + msg + "\nLine: " + line + "\nStack: " + (error ? error.stack : 'N/A') + "\n\n";
+            }
+        };
+    </script>
+
+    <!-- 6. APP LOGIC (INLINE FOR CEP COMPATIBILITY) -->
+    <script type="text/babel">
+        // --- 1. GLOBALS & SETUP ---
+        const React = window.React;
+        const ReactDOM = window.ReactDOM;
+        const { useState, useEffect, useCallback } = React;
+
+        // --- 2. UTILS (CEP) ---
+        const evalScript = (script) => {
+          return new Promise((resolve) => {
+            if (typeof window.CSInterface !== 'undefined') {
+              const csInterface = new window.CSInterface();
+              csInterface.evalScript(script, (result) => {
+                resolve(result);
+              });
+            } else {
+              console.warn("CSInterface not available");
+              resolve("error");
+            }
+          });
+        };
+
+        const openLinkInBrowser = (url) => {
+          if (typeof window.CSInterface !== 'undefined') {
+            const csInterface = new window.CSInterface();
+            csInterface.openURLInDefaultBrowser(url);
+          } else {
+            window.open(url, '_blank');
+          }
+        };
+
+        const loadHostScript = () => {
+          if (typeof window.CSInterface !== 'undefined') {
+            const csInterface = new window.CSInterface();
+            // Use string literal for extension path if SystemPath is undefined in some contexts
+            const extensionRoot = csInterface.getSystemPath("extension");
+            csInterface.evalScript('$.evalFile("' + extensionRoot + '/host/index.jsx")');
+          }
+        };
+
+        // --- 3. COMPONENTS ---
+        const Tooltip = ({ text, className }) => (
+          <div className={`absolute bottom-full mb-1.5 px-2 py-1.5 bg-black text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 border border-[#333] shadow-xl delay-700 max-w-[200px] whitespace-normal leading-tight ${className || "left-1/2 -translate-x-1/2 text-center"}`}>
+            {text}
+          </div>
+        );
+
+        const InputRow = ({ label, id, value, onChange, tooltip }) => (
+          <div className="contents group relative">
+            <div className="text-right text-[#888] font-semibold text-[11px] relative">
+               {label}
+               {tooltip && <Tooltip text={tooltip} className="left-0 text-left w-max max-w-[150px]" />}
+            </div>
+            <input
+              type="text"
+              id={id}
+              value={value}
+              onChange={onChange}
+              className="bg-[#121212] border border-[#383838] text-[#ececec] rounded-[3px] py-[6px] px-[8px] w-full text-[11px] transition-colors duration-200 focus:border-[#2680eb] focus:bg-black focus:outline-none"
+            />
+          </div>
+        );
+
+        const ToggleRow = ({ id, label, emoji, checked, onChange, tooltip }) => (
+          <div className="col-span-full flex items-center justify-between pl-2 pr-1 h-[28px] group relative">
+            {tooltip && <Tooltip text={tooltip} />}
+            <div className="flex items-center gap-2 cursor-pointer select-none" onClick={() => onChange(!checked)}>
+              <span className="text-[14px] leading-none opacity-80 group-hover:opacity-100 transition-opacity">{emoji === "Trash" ? "🗑️" : emoji === "Folder" ? "📂" : "🎞️"}</span>
+              <span className={`text-[11px] transition-colors ${checked ? 'text-[#ececec]' : 'text-[#aaa] group-hover:text-[#ccc]'}`}>{label}</span>
+            </div>
+            <button
+              onClick={() => onChange(!checked)}
+              className={`w-[32px] h-[18px] rounded-full p-[2px] cursor-pointer transition-colors duration-200 outline-none relative box-border border ${checked ? 'bg-[#2680eb] border-[#2680eb]' : 'bg-[#383838] border-[#555] hover:border-[#666]'}`}
+            >
+              <div className={`bg-white w-[12px] h-[12px] rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${checked ? 'translate-x-[14px]' : 'translate-x-0'}`} />
+            </button>
+          </div>
+        );
+
+        // --- 4. MAIN APP COMPONENT ---
+        const App = () => {
+          const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+          const [isSaved, setIsSaved] = useState(false);
+          const [gearRotation, setGearRotation] = useState(0);
+
+          const [config, setConfig] = useState({
+            f_comps: "01_COMPS",
+            f_video: "02_FOOTAGE",
+            f_audio: "03_AUDIO",
+            f_images: "04_IMAGES",
+            f_solids: "99_SOLIDS",
+            ext_3d: "glb,obj,c4d",
+            f_3d: "06_3D_MODELS",
+            delUnused: false,
+            subfolders: true,
+            sepPrecomps: true,
+            ignore: "_FOLDER",
+            f_precomps: "05_PRECOMPS",
+            f_vector: "07_VECTORS",
+            f_others: "99_OTHERS",
+            ext_vector: "ai,svg,eps",
+          });
+
+          useEffect(() => {
+            loadHostScript();
+            try {
+              const saved = localStorage.getItem("aesorter_config");
+              if (saved) setConfig(prev => ({ ...prev, ...JSON.parse(saved) }));
+            } catch (e) {
+              console.warn("Failed to load settings:", e);
+            }
+          }, []);
+
+          const handleConfigChange = (key, value) => {
+            setConfig(prev => ({ ...prev, [key]: value }));
+            setIsSaved(false);
+          };
+
+          const handleInputChange = (e) => {
+            handleConfigChange(e.target.id, e.target.value);
+          };
+
+          const handleSaveSettings = () => {
+            localStorage.setItem("aesorter_config", JSON.stringify(config));
+            setIsSaved(true);
+            setTimeout(() => setIsSaved(false), 2000);
+          };
+
+          const toggleSettings = () => setIsSettingsOpen(v => !v);
+
+          const handleSort = useCallback((selectedOnly) => {
+            const runtimeConfig = { ...config, selectedOnly };
+            const jsonStr = JSON.stringify(runtimeConfig).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+            evalScript(`runSmartSort('${jsonStr}')`);
+          }, [config]);
+
+          const handleLinkClick = () => openLinkInBrowser("https://t.me/kyarovCH");
+          const handleGearHover = () => setGearRotation(prev => prev + 180);
+
+          return (
+            <div className="flex flex-col gap-3 p-4 font-sans text-[11px] box-border select-none min-h-0 app-container">
+
+              {/* ACTION BUTTONS */}
+              <div className="flex flex-col gap-[10px] shrink-0">
+
+                <div className="flex gap-[10px]">
+                  <button onClick={() => handleSort(false)} className="flex-grow h-[38px] bg-[#2680eb] text-white font-bold text-[12px] uppercase tracking-[0.5px] border border-[#2680eb] rounded hover:bg-[#378ef5] hover:border-[#378ef5] hover:shadow-md active:bg-[#1b6ad4] active:border-[#1b6ad4] active:shadow-inner active:scale-[0.98] outline-none smooth-transition origin-center">
+                    Sort All Project
+                  </button>
+
+                  <button
+                    onClick={toggleSettings}
+                    onMouseEnter={handleGearHover}
+                    className={`group w-[38px] h-[38px] flex items-center justify-center bg-[#383838] border border-[#202020] rounded shadow-sm active:bg-[#2a2a2a] active:border-[#202020] active:shadow-inner active:scale-[0.95] outline-none smooth-transition origin-center ${isSettingsOpen ? 'bg-[#444] border-[#555]' : ''}`}
+                  >
+                    <svg 
+                      className="w-5 h-5 fill-[#999] origin-center gear-transition" 
+                      style={{ transform: `rotate(${gearRotation}deg)`, fill: isSettingsOpen ? '#fff' : undefined }} 
+                      viewBox="0 0 24 24" 
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path 
+                        fillRule="evenodd" 
+                        clipRule="evenodd" 
+                        d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58z M12 15.5 A 3.5 3.5 0 1 0 12 8.5 A 3.5 3.5 0 1 0 12 15.5 Z"
+                      />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="flex gap-[10px]">
+                  <button onClick={() => handleSort(true)} className="flex-grow h-[38px] bg-[#2a2a2a] text-[#ccc] font-bold text-[11px] uppercase tracking-[0.5px] border border-[#383838] rounded hover:bg-[#333] hover:text-white hover:border-[#555] hover:shadow-md active:bg-[#222] active:text-[#ccc] active:border-[#383838] active:shadow-inner active:scale-[0.98] outline-none smooth-transition origin-center">
+                    Sort Selected Only
+                  </button>
+                  <div className="w-[38px] h-[38px] shrink-0" />
+                </div>
+              </div>
+
+              {/* SETTINGS PANEL */}
+              {isSettingsOpen && (
+                <div className="grid grid-cols-[70px_1fr] gap-[10px] items-center bg-[#1d1d1d] border border-[#323232] rounded-md p-[14px] shadow-[inset_0_2px_10px_rgba(0,0,0,0.1)] animate-slide-in">
+                  <InputRow label="Comps" id="f_comps" value={config.f_comps} onChange={handleInputChange} />
+                  <InputRow label="Footage" id="f_video" value={config.f_video} onChange={handleInputChange} />
+                  <InputRow label="Audio" id="f_audio" value={config.f_audio} onChange={handleInputChange} />
+                  <InputRow label="Stills" id="f_images" value={config.f_images} onChange={handleInputChange} />
+                  <InputRow label="Solids" id="f_solids" value={config.f_solids} onChange={handleInputChange} />
+
+                  <div className="col-span-full h-px bg-[#333] my-1" />
+
+                  <InputRow label="3D Ext" id="ext_3d" value={config.ext_3d} onChange={handleInputChange} />
+                  <InputRow label="3D Folder" id="f_3d" value={config.f_3d} onChange={handleInputChange} />
+
+                  <div className="col-span-full h-px bg-[#333] my-1" />
+
+                  <ToggleRow 
+                    id="delUnused" 
+                    label="Delete unused items" 
+                    emoji="Trash" 
+                    checked={config.delUnused} 
+                    onChange={v => handleConfigChange("delUnused", v)} 
+                    tooltip="Removes footage not used in any composition"
+                  />
+                  <ToggleRow 
+                    id="subfolders" 
+                    label="Subfolders by extension" 
+                    emoji="Folder" 
+                    checked={config.subfolders} 
+                    onChange={v => handleConfigChange("subfolders", v)}
+                    tooltip="Groups files into subfolders based on file type (e.g. .mp4, .png)"
+                  />
+                  <ToggleRow 
+                    id="sepPrecomps" 
+                    label="Separate Precomps" 
+                    emoji="Film" 
+                    checked={config.sepPrecomps} 
+                    onChange={v => handleConfigChange("sepPrecomps", v)}
+                    tooltip="Moves nested compositions to a dedicated folder"
+                  />
+
+                  <div className="col-span-full h-px bg-[#333] my-1" />
+
+                  <InputRow 
+                    label="Ignore" 
+                    id="ignore" 
+                    value={config.ignore} 
+                    onChange={handleInputChange} 
+                    tooltip="Folder name to skip during sorting"
+                  />
+
+                  <div className="col-span-full pt-1">
+                    <button
+                      onClick={handleSaveSettings}
+                      className={`w-full h-8 text-[11px] font-semibold rounded flex items-center justify-center outline-none active:scale-[0.98] origin-center smooth-transition ${isSaved ? 'bg-[#1e3a1e] text-[#4caf50] border border-[#4caf50] shadow-sm' : 'bg-[#2a2a2a] text-[#aaa] border border-[#383838] hover:bg-[#333] hover:text-white hover:border-[#444]'}`}
+                    >
+                      {isSaved ? "Saved!" : "Save Settings"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="text-center pt-[10px] pb-2 text-[#555] text-[10px]">
+                v2.5 • <span onClick={handleLinkClick} className="text-[#2680eb] cursor-pointer hover:underline hover:text-[#5aaaff] transition-colors duration-200">Chris Kyarov</span>
+              </div>
+            </div>
+          );
+        };
+
+        // --- 5. RENDER ---
+        const rootElement = document.getElementById('root');
+        if (rootElement) {
+          const root = ReactDOM.createRoot(rootElement);
+          root.render(<App />);
+        }
+    </script>
+</body>
+</html>
