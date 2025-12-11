@@ -20,8 +20,8 @@
     *   Vectors (`.ai`, `.svg`, `.eps`) (In the future after effects 2026)
 *   **🎯 Sort Selected Only:** Imported a mess of files into an organized project? Select them and click "Sort Selected Only" to organize just those files without touching your existing structure.
 *   **🧹 Deep Cleaning:** Optional setting to **delete unused footage** (items not used in any composition) to keep your project file light.
-*   **⚙️ Fully Customizable:** Don't like the folder names? Rename them in the settings! Your preferences are saved automatically.
-*   **🎨 Beautiful UI:** A modern, dark-themed interface that matches After Effects, featuring smooth animations, tooltips, and a satisfying gear spin.
+*   **⚙️ Fully Customizable:** Don’t like the folder names? Rename them in Settings and hit **Save**.
+*   **🎨 UI:** A modern, dark-themed interface that matches After Effects, featuring smooth animations, tooltips, and my favourite gear spin.
 
 ---
 
@@ -29,7 +29,9 @@
 
 Since this is a raw CEP extension (not a `.zxp` installer), you need to install it manually.
 
-### 1. Enable Unsigned Extensions (I think you already have it all turned on after installing other stuff, so you can skip it.)
+### 1. Enable Unsigned Extensions
+**(I think you already have it all turned on after installing other stuff, so you can skip it.)**
+
 You must tell After Effects to allow custom extensions.
 *   **Windows:** Open Registry Editor (`regedit`), go to `HKEY_CURRENT_USER/Software/Adobe/CSXS.9`, and add a String key named `PlayerDebugMode` with value `1`.
 *   **Mac:** Open Terminal and type: `defaults write com.adobe.CSXS.9 PlayerDebugMode 1`
@@ -75,7 +77,7 @@ This extension is built with a modern "No-Bundler" approach for maximum simplici
 
 ## ❓ Troubleshooting
 
-**The panel is blank (White Screen)?**
+**The panel is blank?**
 Make sure your computer is connected to the internet. The extension loads React and Tailwind from a CDN (Unpkg/TailwindCDN).
 
 **"Extension could not be loaded" error?**
@@ -83,4 +85,4 @@ Double-check the "Enable Unsigned Extensions" step in the Installation guide. Yo
 
 ---
 
-Created by **Chris Kyarov**
+Created by **Chris Kyarov** and **Gemini**
