@@ -10,7 +10,6 @@ function runSmartSort(configString) {
         app.beginUndoGroup("CEP Smart Sort");
 
         // 2. Логика удаления неиспользуемого
-        // (Только если мы сортируем ВЕСЬ проект, чтобы случайно не удалить нужное при сортировке выделенного)
         if (cfg.delUnused === true && !isSelectedOnly) {
             try { app.project.removeUnusedFootage(); } catch(e) {}
         }
@@ -18,36 +17,81 @@ function runSmartSort(configString) {
         var proj = app.project;
         var folderCache = {};
 
-        // Вспомогательные функции
+        // === Вспомогательные функции ===
+
+        // Проверка, является ли item настоящей папкой
+        function isFolder(item) {
+            if (!item) return false;
+            // Проверка instanceof + наличие свойства numItems (есть только у папок и композиций, но у папок нет слоев)
+            // И у папок нет mainSource
+            return (item instanceof FolderItem && item.numItems !== undefined);
+        }
+
+        // Рекурсивная проверка игнора (проверяет всех родителей до корня)
+        function isIgnored(item, ignoreName) {
+            if (!ignoreName) return false;
+            var current = item.parentFolder;
+            while (current && !(current instanceof Project)) {
+                if (current.name === ignoreName) return true;
+                current = current.parentFolder;
+            }
+            return false;
+        }
+
         function getFolder(name) {
             if (!name) return null;
-            if (folderCache[name]) return folderCache[name];
-            for (var i = 1; i <= proj.numItems; i++) {
-                if (proj.item(i) instanceof FolderItem && proj.item(i).name === name) {
-                    folderCache[name] = proj.item(i);
-                    return proj.item(i);
+            
+            // 1. Проверяем кэш
+            if (folderCache[name]) {
+                var cached = folderCache[name];
+                // Убеждаемся, что объект в кэше всё еще валиден и это папка
+                try {
+                    if (isFolder(cached)) return cached;
+                } catch(e) {
+                    delete folderCache[name]; // Объект протух
                 }
             }
-            // Фикс для Solids
+
+            // 2. Ищем в корне (или во всем проекте, но лучше по top-level для скорости, но AE плоский список обычно)
+            // Ищем существующую папку
+            for (var i = 1; i <= proj.numItems; i++) {
+                var item = proj.item(i);
+                if (isFolder(item) && item.name === name) {
+                    folderCache[name] = item;
+                    return item;
+                }
+            }
+
+            // 3. Фикс для Solids (переименование стандартной папки)
             if (name === cfg.f_solids) {
                 for (var i = 1; i <= proj.numItems; i++) {
-                    if (proj.item(i) instanceof FolderItem && proj.item(i).name === "Solids") {
-                        proj.item(i).name = name;
-                        folderCache[name] = proj.item(i);
-                        return proj.item(i);
+                    var item = proj.item(i);
+                    // Ищем папку "Solids", которая не наша целевая (мы её уже искали выше)
+                    if (isFolder(item) && item.name === "Solids") {
+                        item.name = name;
+                        folderCache[name] = item;
+                        return item;
                     }
                 }
             }
+
+            // 4. Если не нашли - создаем
             var f = proj.items.addFolder(name);
             folderCache[name] = f;
             return f;
         }
 
         function getSubFolder(parentFolder, subName) {
+            // Защита: если родитель вдруг не папка
+            if (!isFolder(parentFolder)) return parentFolder; 
+
+            // Ищем подпапку
             for (var i = 1; i <= parentFolder.numItems; i++) {
                 var item = parentFolder.item(i);
-                if (item instanceof FolderItem && item.name === subName) return item;
+                if (isFolder(item) && item.name === subName) return item;
             }
+
+            // Создаем, если нет
             var newSub = proj.items.addFolder(subName);
             newSub.parentFolder = parentFolder;
             return newSub;
@@ -71,13 +115,11 @@ function runSmartSort(configString) {
         var items = [];
         
         if (isSelectedOnly) {
-            // Если выбрана сортировка только выделенного
             var selection = proj.selection;
             for (var i = 0; i < selection.length; i++) {
                 items.push(selection[i]);
             }
         } else {
-            // Если весь проект
             for (var i = 1; i <= proj.numItems; i++) {
                 items.push(proj.item(i));
             }
@@ -85,21 +127,27 @@ function runSmartSort(configString) {
 
         for (var i = 0; i < items.length; i++) {
             var item = items[i];
+            
+            // Базовые проверки валидности
             if (!item) continue;
+            // Не сортируем сами папки
             if (item instanceof FolderItem) continue;
             
-            // Игнор папка
-            if (item.parentFolder && item.parentFolder.name === cfg.ignore) continue;
+            // Проверка Игнора (Рекурсивная)
+            if (isIgnored(item, cfg.ignore)) continue;
 
             var targetName = null;
             var extension = "";
 
+            // Определение типа и цели
             if (item instanceof CompItem) {
                 if (cfg.sepPrecomps === true && item.usedIn.length > 0) targetName = cfg.f_precomps;
                 else targetName = cfg.f_comps;
             }
             else if (item instanceof FootageItem) {
                 var src = item.mainSource;
+                if (!src) continue; // Бывает для странных placeholder
+
                 if (src instanceof SolidSource) targetName = cfg.f_solids;
                 else if (src instanceof FileSource || src instanceof PlaceholderSource) {
                     var ext = getFileExtension(item.name);
@@ -118,19 +166,33 @@ function runSmartSort(configString) {
                 }
             }
 
+            // Перемещение
             if (targetName) {
-                var finalFolder = getFolder(targetName);
-                if (cfg.subfolders === true && extension !== "") {
-                     if (targetName !== cfg.f_solids && targetName !== cfg.f_comps && targetName !== cfg.f_precomps) {
-                        finalFolder = getSubFolder(finalFolder, extension);
+                try {
+                    var finalFolder = getFolder(targetName);
+                    
+                    // Сабфолдеры
+                    if (cfg.subfolders === true && extension !== "") {
+                         // Не создаем сабфолдеры в Солидах, Компах и Прекомпах (обычно это мусор)
+                         if (targetName !== cfg.f_solids && targetName !== cfg.f_comps && targetName !== cfg.f_precomps) {
+                            finalFolder = getSubFolder(finalFolder, extension);
+                        }
                     }
+
+                    // Финальная проверка перед перемещением
+                    // Мы проверяем isFolder(finalFolder), чтобы не крашнуться с ошибкой "FootageItem is not correct type"
+                    if (finalFolder && isFolder(finalFolder) && item.parentFolder !== finalFolder) {
+                        item.parentFolder = finalFolder;
+                    }
+                } catch(e) {
+                    // Ловим ошибку для конкретного файла, чтобы не прерывать весь скрипт
+                    // $.writeln("Error moving item: " + item.name + " -> " + e.toString());
                 }
-                if (item.parentFolder !== finalFolder) item.parentFolder = finalFolder;
             }
         }
 
         app.endUndoGroup();
-        return "Done"; // Возвращаем ответ в HTML
+        return "Done";
 
     } catch(err) {
         alert("CEP Error: " + err.toString());
