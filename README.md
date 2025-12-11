@@ -1,10 +1,10 @@
 # 🧹 AESORTER
 
-**The Ultimate Project Organizer for Adobe After Effects**
+**Project Organizer for Adobe After Effects**
 
 ![Version](https://img.shields.io/badge/version-2.5-blue.svg) ![Platform](https://img.shields.io/badge/platform-After%20Effects-purple.svg) ![Tech](https://img.shields.io/badge/built%20with-React%20%2B%20Tailwind-06b6d4.svg)
 
-**AESORTER** is a lightweight, production-ready extension that instantly organizes your chaotic Project Panel. Stop wasting time dragging files into folders manually. One click, and everything is in its right place.
+**AESORTER** is a lightweight, production-ready extension that instantly organizes your chaotic Project Panel.
 
 ---
 
@@ -27,9 +27,9 @@
 
 ## 🚀 Installation
 
-Since this is a raw CEP extension (not a `.zxp` installer), you need to install it manually. It's easy!
+Since this is a raw CEP extension (not a `.zxp` installer), you need to install it manually.
 
-### 1. Enable Unsigned Extensions (Important!)
+### 1. Enable Unsigned Extensions (I think you already have it all turned on after installing other stuff, so you can skip it.)
 You must tell After Effects to allow custom extensions.
 *   **Windows:** Open Registry Editor (`regedit`), go to `HKEY_CURRENT_USER/Software/Adobe/CSXS.9`, and add a String key named `PlayerDebugMode` with value `1`.
 *   **Mac:** Open Terminal and type: `defaults write com.adobe.CSXS.9 PlayerDebugMode 1`
