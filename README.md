@@ -30,11 +30,13 @@
 Since this is a raw CEP extension (not a `.zxp` installer), you need to install it manually.
 
 ### 1. Enable Unsigned Extensions
-**(I think you already have it all turned on after installing other stuff, so you can skip it.)**
+<details>
+<summary>I think you already have it all turned on after installing other stuff, so you can skip it.</summary> 
 
 You must tell After Effects to allow custom extensions.
 *   **Windows:** Open Registry Editor (`regedit`), go to `HKEY_CURRENT_USER/Software/Adobe/CSXS.9`, and add a String key named `PlayerDebugMode` with value `1`.
-*   **Mac:** Open Terminal and type: `defaults write com.adobe.CSXS.9 PlayerDebugMode 1`
+*   **Mac:** Open Terminal and type: `defaults write com.adobe.CSXS.9 PlayerDebugMode 1` 
+</details>
 
 ### 2. Copy the Folder
 Move the entire `aeSorter` folder into the Adobe extensions directory:
