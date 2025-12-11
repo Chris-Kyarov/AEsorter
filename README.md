@@ -105,7 +105,7 @@ Created by **Chris Kyarov** and **Gemini**
 
 ![Version](https://img.shields.io/badge/version-2.5-blue.svg) ![Platform](https://img.shields.io/badge/platform-After%20Effects-purple.svg) ![Tech](https://img.shields.io/badge/built%20with-React%20%2B%20Tailwind-06b6d4.svg)
 
-**AESORTER** — это лёгкое, расширение, которое мгновенно наведет порядок в проекте.
+**AESORTER** — это лёгкое расширение, которое мгновенно наведет порядок в проекте.
 
 ---
 
