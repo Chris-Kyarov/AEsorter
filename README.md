@@ -7,7 +7,7 @@
 
 **Project Organizer for Adobe After Effects**
 
-![Version](https://img.shields.io/badge/version-2.5-blue.svg) ![Platform](https://img.shields.io/badge/platform-After%20Effects-purple.svg) ![Tech](https://img.shields.io/badge/built%20with-React%20%2B%20Tailwind-06b6d4.svg)
+![Version](https://img.shields.io/badge/version-2.5.1-blue.svg) ![Platform](https://img.shields.io/badge/platform-After%20Effects-purple.svg) ![Tech](https://img.shields.io/badge/built%20with-React%20%2B%20Tailwind-06b6d4.svg)
 
 **AESORTER** is a lightweight, extension that instantly organizes your chaotic Project Panel.
 
@@ -103,7 +103,7 @@ Created by **Chris Kyarov** and **Gemini**
 
 **Организатор проектов для Adobe After Effects**
 
-![Version](https://img.shields.io/badge/version-2.5-blue.svg) ![Platform](https://img.shields.io/badge/platform-After%20Effects-purple.svg) ![Tech](https://img.shields.io/badge/built%20with-React%20%2B%20Tailwind-06b6d4.svg)
+![Version](https://img.shields.io/badge/version-2.5.1-blue.svg) ![Platform](https://img.shields.io/badge/platform-After%20Effects-purple.svg) ![Tech](https://img.shields.io/badge/built%20with-React%20%2B%20Tailwind-06b6d4.svg)
 
 **AESORTER** — это лёгкое расширение, которое мгновенно наведет порядок в проекте.
 
