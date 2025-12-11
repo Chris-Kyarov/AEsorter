@@ -17,7 +17,7 @@
     *   Images / Stills
     *   Solids
     *   3D Models (`.obj`, `.glb`, `.c4d`)
-    *   Vectors (`.ai`, `.svg`, `.eps`)
+    *   Vectors (`.ai`, `.svg`, `.eps`) (In the future after effects 2026)
 *   **🎯 Sort Selected Only:** Imported a mess of files into an organized project? Select them and click "Sort Selected Only" to organize just those files without touching your existing structure.
 *   **🧹 Deep Cleaning:** Optional setting to **delete unused footage** (items not used in any composition) to keep your project file light.
 *   **⚙️ Fully Customizable:** Don't like the folder names? Rename them in the settings! Your preferences are saved automatically.
